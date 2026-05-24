@@ -9,29 +9,57 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: 'platforms;android-35 build-tools;35.0.0 platform-tools'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.7'
+    - name: Install NDK
+      run: |
+        echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;27.2.12479018"
+        echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> $GITHUB_ENV
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+    - name: Build libhevtun
+      run: bash compile-hevtun.sh
 
-      - name: Build APK
-        run: ./gradlew assembleDebug
+    - name: Copy libhevtun
+      run: cp -r libs V2rayNG/app
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: v2rayNG
-          path: app/build/outputs/apk/debug/app-debug.apk
+    - name: Fetch AndroidLibXrayLite tag
+      run: |
+        cd AndroidLibXrayLite
+        CURRENT_TAG=$(git describe --tags --abbrev=0)
+        echo "CURRENT_TAG=$CURRENT_TAG" >> $GITHUB_ENV
+
+    - name: Download libv2ray
+      uses: robinraju/release-downloader@v1.11
+      with:
+        repository: '2dust/AndroidLibXrayLite'
+        tag: ${{ env.CURRENT_TAG }}
+        fileName: 'libv2ray.aar'
+        out-file-path: V2rayNG/app/libs/
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '21'
+
+    - name: Build Debug APK
+      run: |
+        cd V2rayNG
+        echo "sdk.dir=${ANDROID_HOME}" > local.properties
+        chmod 755 gradlew
+        ./gradlew assembleDebug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: VpnTest-debug
+        path: V2rayNG/app/build/outputs/apk/*/debug/*.apk
