@@ -26,14 +26,14 @@ jobs:
         echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> $GITHUB_ENV
 
     - name: Build libhevtun
-      run: bash compile-hevtun.sh
+      run: bash ${{ github.workspace }}/../compile-hevtun.sh
 
     - name: Copy libhevtun
-      run: cp -r libs V2rayNG/app
+      run: cp -r ${{ github.workspace }}/../libs ${{ github.workspace }}/app
 
     - name: Fetch AndroidLibXrayLite tag
       run: |
-        cd AndroidLibXrayLite
+        cd ${{ github.workspace }}/../AndroidLibXrayLite
         CURRENT_TAG=$(git describe --tags --abbrev=0)
         echo "CURRENT_TAG=$CURRENT_TAG" >> $GITHUB_ENV
 
@@ -43,7 +43,7 @@ jobs:
         repository: '2dust/AndroidLibXrayLite'
         tag: ${{ env.CURRENT_TAG }}
         fileName: 'libv2ray.aar'
-        out-file-path: V2rayNG/app/libs/
+        out-file-path: app/libs/
 
     - name: Setup Java
       uses: actions/setup-java@v4
@@ -53,7 +53,6 @@ jobs:
 
     - name: Build Debug APK
       run: |
-        cd V2rayNG
         echo "sdk.dir=${ANDROID_HOME}" > local.properties
         chmod 755 gradlew
         ./gradlew assembleDebug
@@ -62,4 +61,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: VpnTest-debug
-        path: V2rayNG/app/build/outputs/apk/*/debug/*.apk
+        path: app/build/outputs/apk/*/debug/*.apk
